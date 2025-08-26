@@ -17,12 +17,6 @@ import (
 )
 
 var (
-	titleStyle = lipgloss.NewStyle().
-			Background(lipgloss.Color("#7C3AED")).
-			Foreground(lipgloss.Color("#FFFFFF")).
-			Padding(0, 1).
-			Bold(true)
-
 	focusedBorderStyle = lipgloss.NewStyle().
 				Border(lipgloss.RoundedBorder()).
 				BorderForeground(lipgloss.Color("#7C3AED"))
@@ -283,7 +277,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				break
 			}
 
-			data := m.textInput.Value() + "\r\n"
+			data := m.textInput.Value()
+			if len(data) >= 2 {
+				if data[:2] == `\x` {
+					byteData, err := strconv.Atoi(data[2:])
+					if err != nil {
+						ionlog.Errorf("Invalid hex input: %v", err)
+						break
+					}
+
+					byteData = byteData & 0xFF
+					data = string(rune(byteData))
+
+				}
+			}
+			data += "\n"
 
 			if m.port == nil {
 				ionlog.Error("Serial port is not open, please restart the application")
@@ -296,9 +304,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				break
 			}
 
-			m.serialContent.WriteString(fmt.Sprintf("> %s", data))
-			m.serialViewport.SetContent(m.serialContent.String())
-			m.serialViewport.GotoBottom()
+			ionlog.Infof("Sent Data: % 02x", []byte(data))
+
 			m.textInput.SetValue("")
 		}
 
